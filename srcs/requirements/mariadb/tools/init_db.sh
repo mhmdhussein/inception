@@ -2,31 +2,30 @@
 
 set -e
 
-# Wait for MariaDB
-until mysqladmin ping -h"${WORDPRESS_DB_HOST}" \
-    -u"${WORDPRESS_DB_USER}" \
-    -p"${WORDPRESS_DB_PASSWORD}" --silent; do
-    echo "Waiting for MariaDB..."
-    sleep 2
-done
+# Ensure permissions
+chown -R mysql:mysql /var/lib/mysql
 
-# Download WordPress if not present
-if [ ! -f "/var/www/html/wp-config.php" ]; then
-    echo "Downloading WordPress..."
+# Initialize database if empty
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    echo "Initializing MariaDB database..."
 
-    wget https://wordpress.org/latest.tar.gz
-    tar -xzf latest.tar.gz --strip-components=1
-    rm latest.tar.gz
+    mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
-    cp wp-config-sample.php wp-config.php
+    mysqld --user=mysql --bootstrap << EOF
+FLUSH PRIVILEGES;
 
-    sed -i "s/database_name_here/${WORDPRESS_DB_NAME}/" wp-config.php
-    sed -i "s/username_here/${WORDPRESS_DB_USER}/" wp-config.php
-    sed -i "s/password_here/${WORDPRESS_DB_PASSWORD}/" wp-config.php
-    sed -i "s/localhost/${WORDPRESS_DB_HOST}/" wp-config.php
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
 
-    chown -R www-data:www-data /var/www/html
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
+
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+
+FLUSH PRIVILEGES;
+EOF
+
+    echo "MariaDB initialization completed"
 fi
 
-# Start PHP-FPM in foreground (PID 1)
-exec php-fpm8.2 -F
+# Start MariaDB server (PID 1)
+exec mysqld --user=mysql
