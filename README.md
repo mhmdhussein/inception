@@ -81,8 +81,8 @@ make fclean
 Persistent data is stored on the host machine using bind mounts:
 
 ```text
-/home/mohhusse/data/wordpress
-/home/mohhusse/data/mariadb
+/home/$USER/data/wordpress
+/home/$USER/data/mariadb
 ```
 
 These directories survive container restarts and rebuilds.
