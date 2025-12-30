@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     php-fpm \
     php-mysql \
+    php-redis \
     php-curl \
     php-gd \
     php-intl \
